@@ -36,4 +36,6 @@ curl http://localhost:3000/health
 - `src/index.ts` — entry point: connects MongoDB (Mongoose), starts the server
 - `src/app.ts` — Express app: auth mount, routes, 404 + error handlers
 - `src/auth.ts` — Better Auth (Google sign-in, MongoDB adapter)
+- `src/models/trip.ts` — Trip schema + serializer
+- `src/routes/trips.ts` — `/api/trips` CRUD (session-protected, per-user)
 # Tripora-backend

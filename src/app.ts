@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from "express";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import mongoose from "mongoose";
 import { auth } from "./auth.js";
+import { tripsRouter } from "./routes/trips.js";
 
 export function createApp() {
   const app = express();
@@ -14,7 +15,7 @@ export function createApp() {
   app.get("/", (_req, res) => {
     res.json({
       name: "Tripora API",
-      endpoints: ["/health", "/api/auth", "/api/me"],
+      endpoints: ["/health", "/api/auth", "/api/me", "/api/trips"],
     });
   });
 
@@ -36,6 +37,8 @@ export function createApp() {
     }
     res.json(session);
   });
+
+  app.use("/api/trips", tripsRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "Not found" });
