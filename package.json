@@ -12,7 +12,10 @@
   },
   "private": true,
   "dependencies": {
+    "@better-auth/expo": "^1.7.1",
+    "better-auth": "^1.7.1",
     "express": "^5.2.1",
+    "mongodb": "^7.6.0",
     "mongoose": "^9.9.3"
   },
   "devDependencies": {

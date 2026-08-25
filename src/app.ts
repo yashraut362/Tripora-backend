@@ -1,32 +1,46 @@
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import { dbState } from "./db.js";
-import { apiRouter } from "./routes/index.js";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import mongoose from "mongoose";
+import { auth } from "./auth.js";
 
 export function createApp() {
   const app = express();
+
+  app.all("/api/auth/*splat", toNodeHandler(auth));
 
   app.use(express.json());
 
   app.get("/", (_req, res) => {
     res.json({
       name: "Tripora API",
-      endpoints: ["/health", "/api"],
+      endpoints: ["/health", "/api/auth", "/api/me"],
     });
   });
 
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", uptime: process.uptime(), db: dbState() });
+    res.json({
+      status: "ok",
+      uptime: process.uptime(),
+      db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    });
   });
 
-  app.use("/api", apiRouter);
+  app.get("/api/me", async (req, res) => {
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+    if (!session) {
+      res.status(401).json({ error: "Not signed in" });
+      return;
+    }
+    res.json(session);
+  });
 
-  // Fallthrough: unknown route
   app.use((_req, res) => {
     res.status(404).json({ error: "Not found" });
   });
 
-  // Central error handler — keep the 4-arg signature so Express picks it up.
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
