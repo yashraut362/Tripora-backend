@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { isValidObjectId } from "mongoose";
+import { generateItinerary } from "../ai.js";
 import { auth } from "../auth.js";
 import { Itinerary } from "../models/itinerary.js";
 import type { ItineraryDoc } from "../models/itinerary.js";
@@ -25,6 +26,28 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
   res.locals.userId = session.user.id;
   next();
+}
+
+function generateAndStore(trip: TripDoc) {
+  void generateItinerary({
+    destination: trip.destination,
+    days: trip.days,
+    budget: trip.budget,
+    activities: trip.activities,
+  })
+    .then((generated) =>
+      Itinerary.findOneAndUpdate(
+        { tripId: trip.id as string },
+        { userId: trip.userId, intro: generated.intro, days: generated.days },
+        { upsert: true },
+      ),
+    )
+    .catch((err: unknown) => {
+      console.error(
+        "Itinerary generation failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
 }
 
 function serializeTripDetail(trip: TripDoc, itinerary: ItineraryDoc | null) {
@@ -69,6 +92,7 @@ tripsRouter.post("/", async (req, res) => {
     userId: res.locals.userId,
   });
   res.status(201).json(serializeTripDetail(trip, null));
+  generateAndStore(trip);
 });
 
 tripsRouter.get("/:id", async (req, res) => {
@@ -104,8 +128,9 @@ tripsRouter.put("/:id", async (req, res) => {
   trip.budget = budget;
   trip.activities = activities;
   await trip.save();
-  const itinerary = await Itinerary.findOne({ tripId: trip.id as string });
-  res.json(serializeTripDetail(trip, itinerary));
+  await Itinerary.deleteOne({ tripId: trip.id as string });
+  res.json(serializeTripDetail(trip, null));
+  generateAndStore(trip);
 });
 
 tripsRouter.delete("/:id", async (req, res) => {

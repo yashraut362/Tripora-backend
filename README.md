@@ -36,6 +36,7 @@ curl http://localhost:3000/health
 - `src/index.ts` — entry point: connects MongoDB (Mongoose), starts the server
 - `src/app.ts` — Express app: auth mount, routes, 404 + error handlers
 - `src/auth.ts` — Better Auth (Google sign-in, MongoDB adapter)
+- `src/ai.ts` — OpenAI itinerary generation (needs `OPENAI_API_KEY` in `.env`)
 - `src/models/trip.ts` — Trip schema + serializer
 - `src/models/itinerary.ts` — Itinerary schema (one doc per trip, keyed by `tripId`)
 - `src/routes/trips.ts` — `/api/trips` CRUD (session-protected, per-user)
