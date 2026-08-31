@@ -6,6 +6,8 @@ export interface ItineraryStop {
   title: string;
   detail: string;
   mapsQuery: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface ItineraryDay {
@@ -33,6 +35,8 @@ const stopSchema = new Schema<ItineraryStop>(
     title: { type: String, required: true },
     detail: { type: String, required: true },
     mapsQuery: { type: String, required: true },
+    lat: Number,
+    lng: Number,
   },
   { _id: false },
 );
@@ -53,7 +57,7 @@ const itinerarySchema = new Schema<ItineraryFields>(
     intro: { type: String, default: "" },
     days: { type: [daySchema], default: [] },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 export const Itinerary = model("Itinerary", itinerarySchema);

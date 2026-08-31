@@ -19,7 +19,7 @@ const tripSchema = new Schema<TripFields>(
     budget: { type: Number, default: null },
     activities: { type: [String], default: [] },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 export const Trip = model("Trip", tripSchema);
