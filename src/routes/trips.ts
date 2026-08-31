@@ -3,7 +3,10 @@ import type { NextFunction, Request, Response } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { isValidObjectId } from "mongoose";
 import { auth } from "../auth.js";
+import { Itinerary } from "../models/itinerary.js";
+import type { ItineraryDoc } from "../models/itinerary.js";
 import { serializeTrip, Trip } from "../models/trip.js";
+import type { TripDoc } from "../models/trip.js";
 
 interface TripInput {
   destination: string;
@@ -22,6 +25,24 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
   res.locals.userId = session.user.id;
   next();
+}
+
+function serializeTripDetail(trip: TripDoc, itinerary: ItineraryDoc | null) {
+  return {
+    ...serializeTrip(trip),
+    intro: itinerary?.intro ?? "",
+    itinerary:
+      itinerary?.days.map((day) => ({
+        day: day.day,
+        theme: day.theme,
+        stops: day.stops.map((stop) => ({
+          slot: stop.slot,
+          title: stop.title,
+          detail: stop.detail,
+          mapsQuery: stop.mapsQuery,
+        })),
+      })) ?? [],
+  };
 }
 
 export const tripsRouter = Router();
@@ -49,7 +70,7 @@ tripsRouter.post("/", async (req, res) => {
     activities,
     userId: res.locals.userId,
   });
-  res.status(201).json(serializeTrip(trip));
+  res.status(201).json(serializeTripDetail(trip, null));
 });
 
 tripsRouter.get("/:id", async (req, res) => {
@@ -65,7 +86,8 @@ tripsRouter.get("/:id", async (req, res) => {
     res.status(404).json({ error: "Trip not found" });
     return;
   }
-  res.json(serializeTrip(trip));
+  const itinerary = await Itinerary.findOne({ tripId: trip.id as string });
+  res.json(serializeTripDetail(trip, itinerary));
 });
 
 tripsRouter.put("/:id", async (req, res) => {
@@ -79,16 +101,21 @@ tripsRouter.put("/:id", async (req, res) => {
     budget = null,
     activities = [],
   } = req.body as TripInput;
-  const trip = await Trip.findOneAndUpdate(
-    { _id: req.params.id, userId: res.locals.userId },
-    { destination, days, budget, activities },
-    { new: true, runValidators: true },
-  );
+  const trip = await Trip.findOne({
+    _id: req.params.id,
+    userId: res.locals.userId,
+  });
   if (!trip) {
     res.status(404).json({ error: "Trip not found" });
     return;
   }
-  res.json(serializeTrip(trip));
+  trip.destination = destination;
+  trip.days = days;
+  trip.budget = budget;
+  trip.activities = activities;
+  await trip.save();
+  const itinerary = await Itinerary.findOne({ tripId: trip.id as string });
+  res.json(serializeTripDetail(trip, itinerary));
 });
 
 tripsRouter.delete("/:id", async (req, res) => {
@@ -104,5 +131,6 @@ tripsRouter.delete("/:id", async (req, res) => {
     res.status(404).json({ error: "Trip not found" });
     return;
   }
+  await Itinerary.deleteOne({ tripId: trip.id as string });
   res.status(204).end();
 });

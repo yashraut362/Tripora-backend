@@ -37,5 +37,6 @@ curl http://localhost:3000/health
 - `src/app.ts` — Express app: auth mount, routes, 404 + error handlers
 - `src/auth.ts` — Better Auth (Google sign-in, MongoDB adapter)
 - `src/models/trip.ts` — Trip schema + serializer
+- `src/models/itinerary.ts` — Itinerary schema (one doc per trip, keyed by `tripId`)
 - `src/routes/trips.ts` — `/api/trips` CRUD (session-protected, per-user)
 # Tripora-backend
