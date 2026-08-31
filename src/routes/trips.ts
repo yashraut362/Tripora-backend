@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { NextFunction, Request, Response } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { isValidObjectId } from "mongoose";
-import { generateItinerary } from "../ai.js";
+import { editItinerary, generateItinerary } from "../ai.js";
 import { auth } from "../auth.js";
 import { Itinerary } from "../models/itinerary.js";
 import type { ItineraryDoc } from "../models/itinerary.js";
@@ -131,6 +131,35 @@ tripsRouter.put("/:id", async (req, res) => {
   await Itinerary.deleteOne({ tripId: trip.id as string });
   res.json(serializeTripDetail(trip, null));
   generateAndStore(trip);
+});
+
+tripsRouter.post("/:id/edit", async (req, res) => {
+  const { message } = req.body as { message: string };
+  const trip = await Trip.findOne({
+    _id: req.params.id,
+    userId: res.locals.userId,
+  });
+  if (!trip) {
+    res.status(404).json({ error: "Trip not found" });
+    return;
+  }
+  const current = await Itinerary.findOne({ tripId: trip.id as string });
+  const edited = await editItinerary(
+    {
+      destination: trip.destination,
+      days: trip.days,
+      budget: trip.budget,
+      activities: trip.activities,
+    },
+    { intro: current?.intro ?? "", days: current?.days ?? [] },
+    message,
+  );
+  const itinerary = await Itinerary.findOneAndUpdate(
+    { tripId: trip.id as string },
+    { userId: res.locals.userId, intro: edited.intro, days: edited.days },
+    { new: true, upsert: true },
+  );
+  res.json({ ...serializeTripDetail(trip, itinerary), note: edited.note });
 });
 
 tripsRouter.delete("/:id", async (req, res) => {

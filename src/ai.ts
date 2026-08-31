@@ -65,6 +65,55 @@ const INSTRUCTIONS = [
   "intro is one warm sentence describing the trip, under 20 words.",
 ].join(" ");
 
+const EDIT_SCHEMA = {
+  type: "object",
+  properties: {
+    ...ITINERARY_SCHEMA.properties,
+    note: { type: "string" },
+  },
+  required: [...ITINERARY_SCHEMA.required, "note"],
+  additionalProperties: false,
+};
+
+const EDIT_INSTRUCTIONS = [
+  "You are the itinerary editor for Tripora, a friendly trip planning app.",
+  "The user gives you their trip, the current itinerary, and a change request; return the full updated itinerary.",
+  "Apply only what the request asks for and keep every other day, stop, coordinate and wording exactly as it is.",
+  "A day may have fewer than three stops when the user wants time off; keep slots in Morning, Afternoon, Evening order.",
+  "Follow the same place rules: real specific places, mapsQuery without the destination, lat and lng as decimal numbers.",
+  "note is one friendly sentence telling the user what you changed.",
+].join(" ");
+
+export async function editItinerary(
+  trip: TripInfo,
+  current: GeneratedItinerary,
+  message: string,
+): Promise<GeneratedItinerary & { note: string }> {
+  const response = await new OpenAI().responses.create({
+    model: "gpt-5-mini",
+    instructions: EDIT_INSTRUCTIONS,
+    input: JSON.stringify({
+      destination: trip.destination,
+      totalDays: trip.days,
+      totalBudgetUsd: trip.budget,
+      chosenActivities: trip.activities,
+      currentItinerary: current,
+      request: message,
+    }),
+    text: {
+      format: {
+        type: "json_schema",
+        name: "itinerary_edit",
+        strict: true,
+        schema: EDIT_SCHEMA,
+      },
+    },
+  });
+  return JSON.parse(response.output_text) as GeneratedItinerary & {
+    note: string;
+  };
+}
+
 export async function generateItinerary(
   trip: TripInfo,
 ): Promise<GeneratedItinerary> {
