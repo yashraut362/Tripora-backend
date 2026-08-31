@@ -1,6 +1,6 @@
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import { toNodeHandler } from "better-auth/node";
 import mongoose from "mongoose";
 import { auth } from "./auth.js";
 import { tripsRouter } from "./routes/trips.js";
@@ -15,7 +15,7 @@ export function createApp() {
   app.get("/", (_req, res) => {
     res.json({
       name: "Tripora API",
-      endpoints: ["/health", "/api/auth", "/api/me", "/api/trips"],
+      endpoints: ["/health", "/api/auth", "/api/trips"],
     });
   });
 
@@ -25,17 +25,6 @@ export function createApp() {
       uptime: process.uptime(),
       db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
     });
-  });
-
-  app.get("/api/me", async (req, res) => {
-    const session = await auth.api.getSession({
-      headers: fromNodeHeaders(req.headers),
-    });
-    if (!session) {
-      res.status(401).json({ error: "Not signed in" });
-      return;
-    }
-    res.json(session);
   });
 
   app.use("/api/trips", tripsRouter);

@@ -31,23 +31,21 @@ function serializeTripDetail(trip: TripDoc, itinerary: ItineraryDoc | null) {
   return {
     ...serializeTrip(trip),
     intro: itinerary?.intro ?? "",
-    itinerary:
-      itinerary?.days.map((day) => ({
-        day: day.day,
-        theme: day.theme,
-        stops: day.stops.map((stop) => ({
-          slot: stop.slot,
-          title: stop.title,
-          detail: stop.detail,
-          mapsQuery: stop.mapsQuery,
-        })),
-      })) ?? [],
+    itinerary: itinerary?.days ?? [],
   };
 }
 
 export const tripsRouter = Router();
 
 tripsRouter.use(requireAuth);
+
+tripsRouter.param("id", (_req, res, next, id) => {
+  if (!isValidObjectId(id)) {
+    res.status(404).json({ error: "Trip not found" });
+    return;
+  }
+  next();
+});
 
 tripsRouter.get("/", async (_req, res) => {
   const trips = await Trip.find({ userId: res.locals.userId }).sort({
@@ -74,10 +72,6 @@ tripsRouter.post("/", async (req, res) => {
 });
 
 tripsRouter.get("/:id", async (req, res) => {
-  if (!isValidObjectId(req.params.id)) {
-    res.status(404).json({ error: "Trip not found" });
-    return;
-  }
   const trip = await Trip.findOne({
     _id: req.params.id,
     userId: res.locals.userId,
@@ -91,10 +85,6 @@ tripsRouter.get("/:id", async (req, res) => {
 });
 
 tripsRouter.put("/:id", async (req, res) => {
-  if (!isValidObjectId(req.params.id)) {
-    res.status(404).json({ error: "Trip not found" });
-    return;
-  }
   const {
     destination,
     days,
@@ -119,10 +109,6 @@ tripsRouter.put("/:id", async (req, res) => {
 });
 
 tripsRouter.delete("/:id", async (req, res) => {
-  if (!isValidObjectId(req.params.id)) {
-    res.status(404).json({ error: "Trip not found" });
-    return;
-  }
   const trip = await Trip.findOneAndDelete({
     _id: req.params.id,
     userId: res.locals.userId,
