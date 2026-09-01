@@ -8,6 +8,7 @@ export interface ItineraryStop {
   mapsQuery: string;
   lat?: number;
   lng?: number;
+  tips?: string;
 }
 
 export interface ItineraryDay {
@@ -37,6 +38,7 @@ const stopSchema = new Schema<ItineraryStop>(
     mapsQuery: { type: String, required: true },
     lat: Number,
     lng: Number,
+    tips: String,
   },
   { _id: false },
 );

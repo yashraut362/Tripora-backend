@@ -38,8 +38,17 @@ const ITINERARY_SCHEMA = {
                 mapsQuery: { type: "string" },
                 lat: { type: "number" },
                 lng: { type: "number" },
+                tips: { type: "string" },
               },
-              required: ["slot", "title", "detail", "mapsQuery", "lat", "lng"],
+              required: [
+                "slot",
+                "title",
+                "detail",
+                "mapsQuery",
+                "lat",
+                "lng",
+                "tips",
+              ],
               additionalProperties: false,
             },
           },
@@ -61,6 +70,7 @@ const INSTRUCTIONS = [
   "mapsQuery is a concise Google Maps search for the stop's place (name plus area if needed); never include the destination itself, it gets appended automatically.",
   "lat and lng are the place's approximate latitude and longitude as decimal numbers.",
   "detail is one or two warm, friendly sentences with a practical tip.",
+  "tips is one short practical prep note for the stop: what to carry or wear (sunscreen for a beach, water and good shoes for a hike) and whether tickets or a reservation should be booked online ahead of time.",
   "Weight the plan toward the trip's chosen activities and keep suggestions realistic for the total budget.",
   "intro is one warm sentence describing the trip, under 20 words.",
 ].join(" ");
@@ -81,6 +91,7 @@ const EDIT_INSTRUCTIONS = [
   "Apply only what the request asks for and keep every other day, stop, coordinate and wording exactly as it is.",
   "A day may have fewer than three stops when the user wants time off; keep slots in Morning, Afternoon, Evening order.",
   "Follow the same place rules: real specific places, mapsQuery without the destination, lat and lng as decimal numbers.",
+  "Every stop needs tips, one short practical prep note (what to carry or wear, whether to book tickets or a reservation ahead); write one for any stop missing it.",
   "note is one friendly sentence telling the user what you changed.",
 ].join(" ");
 
