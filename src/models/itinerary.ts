@@ -9,6 +9,7 @@ export interface ItineraryStop {
   lat?: number;
   lng?: number;
   tips?: string;
+  photoUrl?: string;
 }
 
 export interface ItineraryDay {
@@ -39,6 +40,7 @@ const stopSchema = new Schema<ItineraryStop>(
     lat: Number,
     lng: Number,
     tips: String,
+    photoUrl: String,
   },
   { _id: false },
 );

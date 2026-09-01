@@ -8,6 +8,7 @@ import { Itinerary } from "../models/itinerary.js";
 import type { ItineraryDoc } from "../models/itinerary.js";
 import { serializeTrip, Trip } from "../models/trip.js";
 import type { TripDoc } from "../models/trip.js";
+import { placePhotoUrl, withStopPhotos } from "../places.js";
 
 interface TripInput {
   destination: string;
@@ -35,16 +36,30 @@ function generateAndStore(trip: TripDoc) {
     budget: trip.budget,
     activities: trip.activities,
   })
-    .then((generated) =>
-      Itinerary.findOneAndUpdate(
+    .then(async (generated) => {
+      const days = await withStopPhotos(generated.days, trip.destination);
+      return Itinerary.findOneAndUpdate(
         { tripId: trip.id as string },
-        { userId: trip.userId, intro: generated.intro, days: generated.days },
+        { userId: trip.userId, intro: generated.intro, days },
         { upsert: true },
-      ),
-    )
+      );
+    })
     .catch((err: unknown) => {
       console.error(
         "Itinerary generation failed:",
+        err instanceof Error ? err.message : err,
+      );
+    });
+}
+
+function storeTripImage(trip: TripDoc) {
+  void placePhotoUrl(trip.destination)
+    .then((imageUrl) => {
+      if (imageUrl) return Trip.updateOne({ _id: trip.id }, { imageUrl });
+    })
+    .catch((err: unknown) => {
+      console.error(
+        "Trip image fetch failed:",
         err instanceof Error ? err.message : err,
       );
     });
@@ -93,6 +108,7 @@ tripsRouter.post("/", async (req, res) => {
   });
   res.status(201).json(serializeTripDetail(trip, null));
   generateAndStore(trip);
+  storeTripImage(trip);
 });
 
 tripsRouter.get("/:id", async (req, res) => {
@@ -123,6 +139,7 @@ tripsRouter.put("/:id", async (req, res) => {
     res.status(404).json({ error: "Trip not found" });
     return;
   }
+  const needsImage = destination !== trip.destination || !trip.imageUrl;
   trip.destination = destination;
   trip.days = days;
   trip.budget = budget;
@@ -131,6 +148,7 @@ tripsRouter.put("/:id", async (req, res) => {
   await Itinerary.deleteOne({ tripId: trip.id as string });
   res.json(serializeTripDetail(trip, null));
   generateAndStore(trip);
+  if (needsImage) storeTripImage(trip);
 });
 
 tripsRouter.post("/:id/edit", async (req, res) => {
@@ -154,9 +172,14 @@ tripsRouter.post("/:id/edit", async (req, res) => {
     { intro: current?.intro ?? "", days: current?.days ?? [] },
     message,
   );
+  const days = await withStopPhotos(
+    edited.days,
+    trip.destination,
+    current?.days ?? [],
+  );
   const itinerary = await Itinerary.findOneAndUpdate(
     { tripId: trip.id as string },
-    { userId: res.locals.userId, intro: edited.intro, days: edited.days },
+    { userId: res.locals.userId, intro: edited.intro, days },
     { new: true, upsert: true },
   );
   res.json({ ...serializeTripDetail(trip, itinerary), note: edited.note });
