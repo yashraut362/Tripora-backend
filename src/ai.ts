@@ -11,6 +11,7 @@ export interface TripInfo {
   days: number;
   budget: number | null;
   activities: string[];
+  notes: string;
 }
 
 const ITINERARY_SCHEMA = {
@@ -72,6 +73,7 @@ const INSTRUCTIONS = [
   "detail is one or two warm, friendly sentences with a practical tip.",
   "tips is one short practical prep note for the stop: what to carry or wear (sunscreen for a beach, water and good shoes for a hike) and whether tickets or a reservation should be booked online ahead of time.",
   "Weight the plan toward the trip's chosen activities and keep suggestions realistic for the total budget.",
+  "travelerWishes is the traveler's own words about what they want from this trip; when present it outranks the generic activity picks, so shape the plan around it.",
   "intro is one warm sentence describing the trip, under 20 words.",
 ].join(" ");
 
@@ -108,6 +110,7 @@ export async function editItinerary(
       totalDays: trip.days,
       totalBudgetUsd: trip.budget,
       chosenActivities: trip.activities,
+      travelerWishes: trip.notes,
       currentItinerary: current,
       request: message,
     }),
@@ -136,6 +139,7 @@ export async function generateItinerary(
       totalDays: trip.days,
       totalBudgetUsd: trip.budget,
       chosenActivities: trip.activities,
+      travelerWishes: trip.notes,
     }),
     text: {
       format: {

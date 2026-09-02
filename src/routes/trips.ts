@@ -15,6 +15,7 @@ interface TripInput {
   days: number;
   budget?: number | null;
   activities?: string[];
+  notes?: string;
 }
 
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -35,6 +36,7 @@ function generateAndStore(trip: TripDoc) {
     days: trip.days,
     budget: trip.budget,
     activities: trip.activities,
+    notes: trip.notes,
   })
     .then(async (generated) => {
       const days = await withStopPhotos(generated.days, trip.destination);
@@ -98,12 +100,14 @@ tripsRouter.post("/", async (req, res) => {
     days,
     budget = null,
     activities = [],
+    notes = "",
   } = req.body as TripInput;
   const trip = await Trip.create({
     destination,
     days,
     budget,
     activities,
+    notes,
     userId: res.locals.userId,
   });
   res.status(201).json(serializeTripDetail(trip, null));
@@ -130,6 +134,7 @@ tripsRouter.put("/:id", async (req, res) => {
     days,
     budget = null,
     activities = [],
+    notes = "",
   } = req.body as TripInput;
   const trip = await Trip.findOne({
     _id: req.params.id,
@@ -144,6 +149,7 @@ tripsRouter.put("/:id", async (req, res) => {
   trip.days = days;
   trip.budget = budget;
   trip.activities = activities;
+  trip.notes = notes;
   await trip.save();
   await Itinerary.deleteOne({ tripId: trip.id as string });
   res.json(serializeTripDetail(trip, null));
@@ -168,6 +174,7 @@ tripsRouter.post("/:id/edit", async (req, res) => {
       days: trip.days,
       budget: trip.budget,
       activities: trip.activities,
+      notes: trip.notes,
     },
     { intro: current?.intro ?? "", days: current?.days ?? [] },
     message,

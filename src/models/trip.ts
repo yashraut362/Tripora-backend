@@ -7,6 +7,7 @@ export interface TripFields {
   days: number;
   budget: number | null;
   activities: string[];
+  notes: string;
   imageUrl?: string;
 }
 
@@ -19,6 +20,7 @@ const tripSchema = new Schema<TripFields>(
     days: { type: Number, required: true, min: 1, max: 30 },
     budget: { type: Number, default: null },
     activities: { type: [String], default: [] },
+    notes: { type: String, default: "" },
     imageUrl: String,
   },
   { timestamps: true, versionKey: false },
@@ -33,6 +35,7 @@ export function serializeTrip(trip: TripDoc) {
     days: trip.days,
     budget: trip.budget,
     activities: trip.activities,
+    notes: trip.notes,
     imageUrl: trip.imageUrl ?? null,
   };
 }
