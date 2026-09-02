@@ -175,6 +175,47 @@ export async function placePhotoUrl(query: string): Promise<string | null> {
   return nearbyImage(place.lat, place.lng, query.split(",")[0] ?? query);
 }
 
+export async function photoForPlace(
+  name: string,
+  destination: string,
+  lat?: number,
+  lng?: number,
+): Promise<string | undefined> {
+  const cleaned = cleanQuery(name);
+  const photo = await placePhotoUrl(`${cleaned}, ${destination}`);
+  if (photo) return photo;
+  if (lat === undefined || lng === undefined) return undefined;
+  return (await nearbyImage(lat, lng, cleaned)) ?? undefined;
+}
+
+export async function withPlacePhotos<
+  T extends {
+    name: string;
+    mapsQuery: string;
+    lat?: number;
+    lng?: number;
+    photoUrl?: string;
+  },
+>(places: T[], destination: string, existing: T[] = []): Promise<T[]> {
+  const known = new Map<string, string>();
+  for (const place of existing) {
+    if (place.photoUrl) known.set(place.name, place.photoUrl);
+  }
+  return Promise.all(
+    places.map(async (place) => ({
+      ...place,
+      photoUrl:
+        known.get(place.name) ??
+        (await photoForPlace(
+          place.mapsQuery,
+          destination,
+          place.lat,
+          place.lng,
+        )),
+    })),
+  );
+}
+
 export async function withStopPhotos(
   days: ItineraryDay[],
   destination: string,
@@ -187,12 +228,8 @@ export async function withStopPhotos(
     }
   }
 
-  async function stopPhoto(stop: ItineraryStop) {
-    const name = cleanQuery(stop.mapsQuery);
-    const photo = await placePhotoUrl(`${name}, ${destination}`);
-    if (photo) return photo;
-    if (stop.lat === undefined || stop.lng === undefined) return undefined;
-    return (await nearbyImage(stop.lat, stop.lng, name)) ?? undefined;
+  function stopPhoto(stop: ItineraryStop) {
+    return photoForPlace(stop.mapsQuery, destination, stop.lat, stop.lng);
   }
 
   return Promise.all(

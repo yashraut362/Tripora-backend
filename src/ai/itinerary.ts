@@ -1,17 +1,10 @@
-import OpenAI from "openai";
-import type { ItineraryDay } from "./models/itinerary.js";
+import type { ItineraryDay } from "../models/itinerary.js";
+import { generateJson } from "./client.js";
+import type { TripInfo } from "./client.js";
 
 export interface GeneratedItinerary {
   intro: string;
   days: ItineraryDay[];
-}
-
-export interface TripInfo {
-  destination: string;
-  days: number;
-  budget: number | null;
-  activities: string[];
-  notes: string;
 }
 
 const ITINERARY_SCHEMA = {
@@ -97,58 +90,28 @@ const EDIT_INSTRUCTIONS = [
   "note is one friendly sentence telling the user what you changed.",
 ].join(" ");
 
-export async function editItinerary(
+export function generateItinerary(trip: TripInfo): Promise<GeneratedItinerary> {
+  return generateJson("itinerary", ITINERARY_SCHEMA, INSTRUCTIONS, {
+    destination: trip.destination,
+    totalDays: trip.days,
+    totalBudgetUsd: trip.budget,
+    chosenActivities: trip.activities,
+    travelerWishes: trip.notes,
+  });
+}
+
+export function editItinerary(
   trip: TripInfo,
   current: GeneratedItinerary,
   message: string,
 ): Promise<GeneratedItinerary & { note: string }> {
-  const response = await new OpenAI().responses.create({
-    model: "gpt-5-mini",
-    instructions: EDIT_INSTRUCTIONS,
-    input: JSON.stringify({
-      destination: trip.destination,
-      totalDays: trip.days,
-      totalBudgetUsd: trip.budget,
-      chosenActivities: trip.activities,
-      travelerWishes: trip.notes,
-      currentItinerary: current,
-      request: message,
-    }),
-    text: {
-      format: {
-        type: "json_schema",
-        name: "itinerary_edit",
-        strict: true,
-        schema: EDIT_SCHEMA,
-      },
-    },
+  return generateJson("itinerary_edit", EDIT_SCHEMA, EDIT_INSTRUCTIONS, {
+    destination: trip.destination,
+    totalDays: trip.days,
+    totalBudgetUsd: trip.budget,
+    chosenActivities: trip.activities,
+    travelerWishes: trip.notes,
+    currentItinerary: current,
+    request: message,
   });
-  return JSON.parse(response.output_text) as GeneratedItinerary & {
-    note: string;
-  };
-}
-
-export async function generateItinerary(
-  trip: TripInfo,
-): Promise<GeneratedItinerary> {
-  const response = await new OpenAI().responses.create({
-    model: "gpt-5-mini",
-    instructions: INSTRUCTIONS,
-    input: JSON.stringify({
-      destination: trip.destination,
-      totalDays: trip.days,
-      totalBudgetUsd: trip.budget,
-      chosenActivities: trip.activities,
-      travelerWishes: trip.notes,
-    }),
-    text: {
-      format: {
-        type: "json_schema",
-        name: "itinerary",
-        strict: true,
-        schema: ITINERARY_SCHEMA,
-      },
-    },
-  });
-  return JSON.parse(response.output_text) as GeneratedItinerary;
 }
