@@ -1,43 +1,56 @@
 # Tripora backend
 
-REST API for Tripora, the AI travel planner. Node + Express + TypeScript + MongoDB (Mongoose).
+REST API for **Tripora, an AI travel planner**. Node + Express + TypeScript + MongoDB (Mongoose) + OpenAI.
 
-## Prerequisites
+The mobile app lives in the [Tripora repo](https://github.com/) <!-- TODO: link Tripora app repo -->.
 
-A MongoDB server. Either run one locally:
+## What it does
 
-```sh
-brew tap mongodb/brew && brew install mongodb-community
-brew services start mongodb-community
+- **Auth** — Google sign-in via Better Auth, mounted at `/api/auth/*`.
+- **Trips** — `/api/trips`: per-user CRUD plus a chat-edit endpoint.
+- **AI generation** — itineraries and food guides are generated in the background (`gpt-5-mini`, OpenAI structured outputs with strict JSON schemas), so saving a trip responds instantly; each lives in its own collection keyed by `tripId`, and its absence is the "still generating" state.
+- **Chat edits** — a small classifier call routes each message to the itinerary editor or the food-guide editor; edits are surgical and return a note describing the change.
+- **Free place photos** — Nominatim geocoding → OSM entity tags → Wikidata/Commons image → geotagged Commons photos near the coordinates as fallback, throttled to 1 req/s with a relevance check.
+
+## Architecture
+
+<!-- TODO: optionally replace with docs/architecture.png -->
+
+```mermaid
+flowchart LR
+  app["📱 Tripora app"] -->|cookie-authed fetch| api["Express /api/trips + Better Auth"]
+  api --> gen["background generation"]
+  gen --> ai["OpenAI structured outputs<br/>itinerary · food guide · edit router"]
+  gen --> photos["photo pipeline<br/>Nominatim → Wikidata → Commons"]
+  api <--> db[("MongoDB<br/>trips · itineraries · foodguides · auth")]
 ```
 
-or use a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster and put its
-connection string in `.env` as `MONGODB_URI`. Defaults to
-`mongodb://127.0.0.1:27017/tripora` when unset.
+## Setup
 
-## Commands
-
-```sh
-npm install       # once
-npm run dev       # dev server with reload (nodemon + tsx)
-npm run typecheck # tsc --noEmit
-npm run build     # compile to dist/
-npm start         # run compiled build
+```bash
+npm install
+cp .env.example .env   # fill in the values below
+npm run dev            # nodemon + tsx on port 3000
 ```
 
-Server defaults to port 3000 (`PORT` env var to change). Quick check:
+| Env var | Purpose |
+| --- | --- |
+| `MONGODB_URI` | MongoDB / Atlas connection string |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth web client (redirect URI `http://localhost:3000/api/auth/callback/google`) |
+| `OPENAI_API_KEY` | itinerary + food generation |
 
-```sh
-curl http://localhost:3000/health
-```
+Other commands: `npm run typecheck`, `npm run build`, `npm start`. Health check: `curl http://localhost:3000/health`.
 
 ## Layout
 
-- `src/index.ts` — entry point: connects MongoDB (Mongoose), starts the server
+- `src/index.ts` — entry point: connects MongoDB, starts the server
 - `src/app.ts` — Express app: auth mount, routes, 404 + error handlers
 - `src/auth.ts` — Better Auth (Google sign-in, MongoDB adapter)
-- `src/ai.ts` — OpenAI itinerary generation (needs `OPENAI_API_KEY` in `.env`)
-- `src/models/trip.ts` — Trip schema + serializer
-- `src/models/itinerary.ts` — Itinerary schema (one doc per trip, keyed by `tripId`)
-- `src/routes/trips.ts` — `/api/trips` CRUD (session-protected, per-user)
-# Tripora-backend
+- `src/ai/client.ts` — shared OpenAI structured-output helper + edit-intent router
+- `src/ai/itinerary.ts` — itinerary generator + chat editor
+- `src/ai/food.ts` — food guide generator + chat editor
+- `src/places.ts` — free place-photo pipeline (throttled)
+- `src/models/` — `trip`, `itinerary`, `food` schemas
+- `src/routes/trips.ts` — `/api/trips` CRUD + chat edit (session-protected)
