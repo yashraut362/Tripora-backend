@@ -14,42 +14,7 @@ The mobile app lives in the [Tripora repo](https://github.com/) <!-- TODO: link 
 
 ## Architecture
 
-<!-- TODO: optionally replace with docs/architecture.png -->
-
-```mermaid
-flowchart LR
-  app["📱 Tripora app"]
-
-  subgraph backend["🚏 Tripora backend · Express + TypeScript"]
-    direction LR
-    routes["/api/trips routes"]
-
-    subgraph auth["1 · Auth layer"]
-      ba["Better Auth<br/>/api/auth/* · Google OAuth"]
-      guard["requireAuth<br/>session middleware"]
-    end
-
-    subgraph ai["2 · AI layer"]
-      gen["OpenAI structured outputs<br/>itinerary · food guide · edit router"]
-      photos["photo pipeline<br/>Nominatim → Wikidata → Commons"]
-    end
-
-    subgraph db["3 · DB layer · MongoDB"]
-      trips[("trips")]
-      itineraries[("itineraries")]
-      foodguides[("foodguides")]
-      users[("user · session · account")]
-    end
-  end
-
-  app -->|"Google sign-in"| ba
-  app -->|"cookie-authed requests"| guard --> routes
-  ba --> users
-  routes --> trips
-  routes --> gen --> photos
-  gen --> itineraries
-  gen --> foodguides
-```
+![Tripora backend architecture](docs/architecture.png)
 
 ## Setup
 
